@@ -1,2 +1,5 @@
 # Smart-Aquarium
-Water quality monitoring system
+Water quality monitoring system  
+
+Client: Favour Umukoro  
+
