@@ -2,6 +2,9 @@
 #include <DallasTemperature.h> //3.9.0
 #include "GravityTDS.h"
 
+//Algorithm: Read PH(first),temperature(second),TDS(last) and .....
+//repeat the sequence every 2s.
+
 //PH sensor
 const uint8_t phSensorPin = A0;
 const float calibrationValue = 21.34 - 0.75;
@@ -33,10 +36,6 @@ void setup()
 void loop() 
 {
   // put your main code here, to run repeatedly:
-  //Switch TDS sensor OFF
-  digitalWrite(tdsVccControlPin,LOW);
-  digitalWrite(tdsGndControlPin,LOW);
-  delay(1000);
   //Get PH 
   float avgRawData = 0;
   for(int i = 0; i < numOfSamples; i++)
@@ -62,5 +61,8 @@ void loop()
   Serial.print("TDS = ");
   Serial.print(tdsValue,0);
   Serial.println("ppm");  
-  delay(1000);
+  //Switch TDS sensor OFF
+  digitalWrite(tdsVccControlPin,LOW);
+  digitalWrite(tdsGndControlPin,LOW);
+  delay(2000);  
 }
