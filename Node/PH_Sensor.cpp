@@ -8,6 +8,11 @@ PH::PH(uint8_t sensorPin,float calibrationValue,uint8_t numOfSamples)
   this->calibrationValue = calibrationValue;
 }
 
+void PH::Calibrate(float calibrationValue)
+{
+  this->calibrationValue = calibrationValue;
+}
+
 float PH::GetValue(void)
 {
   float avgRawData = 0;

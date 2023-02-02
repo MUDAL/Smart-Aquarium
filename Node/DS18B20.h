@@ -8,6 +8,7 @@ class DS18B20
   private:
     OneWire oneWire;
     DallasTemperature temperatureSensor;
+    
   public:
     DS18B20(uint8_t oneWirePin);
     float GetValue(void);

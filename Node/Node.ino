@@ -1,6 +1,9 @@
+#include <SoftwareSerial.h>
+#include "MNI.h"
 #include "PH_Sensor.h"
 #include "DS18B20.h"
 #include "TDS.h"
+#include "Turbidity.h"
 
 //Algorithm: Read PH(first),temperature(second),TDS(last) and .....
 //repeat the sequence periodically.
@@ -12,6 +15,7 @@ namespace Pin
   const uint8_t tdsSensor = A1;
   const uint8_t tdsVcc = 3;
   const uint8_t tdsGnd = 4;
+  const uint8_t turbiditySensor = A2;
 };
 
 const float phCalibration = 21.34 - 0.75;
