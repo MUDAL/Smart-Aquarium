@@ -16,14 +16,20 @@ namespace Pin
   const uint8_t tdsVcc = 3;
   const uint8_t tdsGnd = 4;
   const uint8_t turbiditySensor = A2;
+  const uint8_t nodeRx = 6;
+  const uint8_t nodeTx = 7;
 };
 
-const float phCalibration = 21.34 - 0.75;
 const uint8_t numberOfSensorSamples = 100;
-
+const float phCalibration = 21.34 - 0.75;
+//Sensors
 PH phSensor(Pin::phSensor,phCalibration,numberOfSensorSamples);
 DS18B20 temperatureSensor(Pin::temperatureSensor);
 TDS tdsSensor(Pin::tdsSensor,Pin::tdsVcc,Pin::tdsGnd);
+Turbidity turbiditySensor(Pin::turbiditySensor,numberOfSensorSamples);
+//Master-Node-Interface 
+SoftwareSerial nodeSerial(Pin::nodeRx,Pin::nodeTx);
+MNI mni(&nodeSerial);
 
 void setup() 
 {
@@ -40,11 +46,16 @@ void loop()
   Serial.print("Temperature = ");
   Serial.print(temperature);
   Serial.println("C");
-  float tdsValue = tdsSensor.GetValue(temperature);
 
+  int turbidity = turbiditySensor.GetValue();
+  Serial.print("Turbidity = ");
+  Serial.print(turbidity);
+  Serial.println("NTU");
+   
+  int tdsValue = tdsSensor.GetValue(temperature);
   Serial.print("TDS = ");
-  Serial.print(tdsValue,0);
-  Serial.println("ppm");  
+  Serial.print(tdsValue);
+  Serial.println("ppm\n");  
 
   delay(2000);  
 }

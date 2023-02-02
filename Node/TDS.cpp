@@ -17,7 +17,7 @@ TDS::TDS(uint8_t signalPin,uint8_t vccControlPin,uint8_t gndControlPin,
   gravityTds.begin();  //initialization    
 }
 
-float TDS::GetValue(float temperature)
+int TDS::GetValue(float temperature)
 {
   //Turn TDS sensor on, get readings, then turn it off
   digitalWrite(this->vccControlPin,HIGH);
@@ -25,7 +25,7 @@ float TDS::GetValue(float temperature)
   delay(500); //start-up time
   gravityTds.setTemperature(temperature);  // set the temperature and execute temperature compensation
   gravityTds.update();  //sample and calculate 
-  float tdsValue = gravityTds.getTdsValue(); 
+  int tdsValue = lround(gravityTds.getTdsValue()); 
   digitalWrite(this->vccControlPin,LOW);
   digitalWrite(this->gndControlPin,LOW);
   return tdsValue;

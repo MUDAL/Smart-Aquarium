@@ -4,8 +4,9 @@ class Turbidity
 {
   private:
     uint8_t sensorPin;
+    uint8_t numOfSamples;
     
   public:
-    Turbidity(uint8_t sensorPin);
-    float GetValue(void);
+    Turbidity(uint8_t sensorPin,uint8_t numOfSamples);
+    int GetValue(void);
 };

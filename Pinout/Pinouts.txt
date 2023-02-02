@@ -16,3 +16,12 @@ MASTER [ESP32]:
 MNI Serial interface wiring:
 * NANO TX(7) -- ESP32 RX(16)
 * NANO RX(6) -- ESP32 TX(17)
+
+--Turbidity sensor interface board:
+Board pins:
+*G = Ground
+*A = Analog output (connected to analog pin of Arduino Nano)
+*V = Vcc (5V)
+*1 = Red wire of turbidity sensor 
+*2 = Blue wire of turbidity sensor
+*3 = Yellow wire of turbidity sensor
