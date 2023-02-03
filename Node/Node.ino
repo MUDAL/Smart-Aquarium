@@ -38,24 +38,34 @@ void setup()
 
 void loop() 
 {
-  float ph = phSensor.GetValue();
-  Serial.print("PH: ");
-  Serial.println(ph);   
+  if(mni.ReceivedData())
+  {
+    if(mni.DecodeData(MNI::RxDataId::DATA_QUERY) == MNI::QUERY)
+    {
+      float ph = phSensor.GetValue();
+      float temperature = temperatureSensor.GetValue();
+      uint16_t tds = tdsSensor.GetValue(temperature);
+      uint16_t turbidity = turbiditySensor.GetValue();
 
-  float temperature = temperatureSensor.GetValue();
-  Serial.print("Temperature = ");
-  Serial.print(temperature);
-  Serial.println("C");
-
-  int turbidity = turbiditySensor.GetValue();
-  Serial.print("Turbidity = ");
-  Serial.print(turbidity);
-  Serial.println("NTU");
-   
-  int tdsValue = tdsSensor.GetValue(temperature);
-  Serial.print("TDS = ");
-  Serial.print(tdsValue);
-  Serial.println("ppm\n");  
-
-  delay(2000);  
+      //Debug
+      Serial.print("PH: ");
+      Serial.println(ph,1);   
+      Serial.print("Temperature = ");
+      Serial.print(temperature);
+      Serial.println("C");
+      Serial.print("TDS = ");
+      Serial.print(tds);
+      Serial.println("ppm");
+      Serial.print("Turbidity = ");
+      Serial.print(turbidity);
+      Serial.println("NTU\n"); 
+      
+      mni.EncodeData(MNI::ACK,MNI::TxDataId::DATA_ACK);
+      mni.EncodeData((ph * 10),MNI::TxDataId::PH);
+      mni.EncodeData((temperature * 100),MNI::TxDataId::TEMPERATURE);
+      mni.EncodeData(tds,MNI::TxDataId::TDS);
+      mni.EncodeData(turbidity,MNI::TxDataId::TURBIDITY);
+      mni.TransmitData();
+    }
+  }
 }

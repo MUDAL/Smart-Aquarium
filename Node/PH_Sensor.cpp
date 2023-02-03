@@ -23,5 +23,6 @@ float PH::GetValue(void)
   avgRawData = avgRawData / (float) this->numOfSamples;
   float volt = (avgRawData * 5.0) / 1024.0;
   float ph = -5.70 * volt + this->calibrationValue;
+  ph = lround(ph * 10.0) / 10.0; //round to 1dp
   return ph;  
 }
