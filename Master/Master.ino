@@ -10,7 +10,7 @@
 //Maximum number of characters for HiveMQ topic(s)
 #define SIZE_TOPIC             30
 //Define textbox for MQTT publish topic
-WiFiManagerParameter subTopic("0","HiveMQ Subscribe topic","",SIZE_TOPIC);
+WiFiManagerParameter subTopic("0","HiveMQ Subscription topic","",SIZE_TOPIC);
 Preferences preferences; //for accessing ESP32 flash memory
 
 //Type(s)
@@ -25,6 +25,7 @@ typedef struct
 //RTOS Handle(s)
 TaskHandle_t wifiTaskHandle;
 QueueHandle_t nodeToAppQueue;
+QueueHandle_t nodeToMqttQueue;
 
 /**
  * @brief Store new data to specified location in ESP32's flash memory 
@@ -45,6 +46,7 @@ void setup()
   Serial.begin(115200);
   preferences.begin("S-Aqu",false);
   nodeToAppQueue = xQueueCreate(1,sizeof(sensor_t));
+  nodeToMqttQueue = xQueueCreate(1,sizeof(sensor_t));
   if(nodeToAppQueue != NULL)
   {
     Serial.println("Node-Application Queue successfully created");
@@ -53,9 +55,18 @@ void setup()
   {
     Serial.println("Node-Application Queue failed");
   }
+  if(nodeToMqttQueue != NULL)
+  {
+    Serial.println("Node-MQTT Queue successfully created");
+  }
+  else
+  {
+    Serial.println("Node-MQTT Queue failed");
+  }  
   xTaskCreatePinnedToCore(WiFiManagementTask,"",7000,NULL,1,&wifiTaskHandle,1);
   xTaskCreatePinnedToCore(ApplicationTask,"",30000,NULL,1,NULL,1);
   xTaskCreatePinnedToCore(NodeTask,"",25000,NULL,1,NULL,1);
+  xTaskCreatePinnedToCore(MqttTask,"",7000,NULL,1,NULL,1);
 }
 
 void loop() 
@@ -120,6 +131,9 @@ void WiFiManagementTask(void* pvParameters)
   }
 }
 
+/**
+ * @brief Handles main application logic.
+*/
 void ApplicationTask(void* pvParameters)
 {
   static LiquidCrystal_I2C lcd(0x27,16,2);
@@ -161,7 +175,7 @@ void ApplicationTask(void* pvParameters)
     //Receive sensor data from the Node-Application Queue.
     if(xQueueReceive(nodeToAppQueue,&sensorData,0) == pdPASS)
     {
-      Serial.println("--Data successfully received from Node task\n");
+      Serial.println("--Application task received data from Node task\n");
     }
     //FSM [Displays the received sensor data on the LCD]
     switch(displayState)
@@ -203,11 +217,13 @@ void ApplicationTask(void* pvParameters)
 }
 
 /**
- * @brief Handles communication between the master and node.
+ * @brief Handles communication between the master and node via a
+ * serial interface (i.e. MNI).
+ * NB: MNI stands for 'Master-Node-Interface'
 */
 void NodeTask(void* pvParameters)
 {
-  static MNI mni(&Serial2); //MNI: Master-Node-Interface
+  static MNI mni(&Serial2); 
   static sensor_t sensorData;
   uint32_t prevTime = millis();
   
@@ -252,6 +268,61 @@ void NodeTask(void* pvParameters)
         else
         {
           Serial.println("--Failed to send data to Application task\n");
+        }
+        //Place sensor data in the Node-MQTT Queue
+        if(xQueueSend(nodeToMqttQueue,&sensorData,0) == pdPASS)
+        {
+          Serial.println("--Data successfully sent to MQTT task\n");
+        }
+        else
+        { //Can occur if the ESP32 is not connected to a WiFi hotspot.
+          Serial.println("--Failed to send data to MQTT task\n");
+        }        
+      }
+    }
+  }
+}
+
+/**
+ * @brief Handles uploading of sensor data to the cloud via MQTT.
+*/
+void MqttTask(void* pvParameters)
+{
+  static sensor_t sensorData;
+  static WiFiClient wifiClient;
+  static PubSubClient mqttClient(wifiClient);
+  char prevSubTopic[SIZE_TOPIC] = {0};
+  const char *mqttBroker = "broker.hivemq.com";
+  const uint16_t mqttPort = 1883;  
+  
+  while(1)
+  {
+    if(WiFi.status() == WL_CONNECTED)
+    {       
+      if(!mqttClient.connected())
+      { 
+        preferences.getBytes("0",prevSubTopic,SIZE_TOPIC);
+        mqttClient.setServer(mqttBroker,mqttPort);
+        while(!mqttClient.connected())
+        {
+          String clientID = String(WiFi.macAddress());
+          if(mqttClient.connect(clientID.c_str()))
+          {
+            Serial.println("Connected to HiveMQ broker");
+          }
+        } 
+      }
+      else
+      {
+        //Receive sensor data from the Node-MQTT Queue.
+        if(xQueueReceive(nodeToMqttQueue,&sensorData,0) == pdPASS)
+        {
+          Serial.println("--MQTT task received data from Node task\n");
+          String dataToPublish = "PH: " + String(sensorData.ph,1) + " \n" +
+                       "Temp:  " + String(sensorData.temperature,2) + " C\n" +
+                       "TDS: " + String(sensorData.tds) + " ppm\n" + 
+                       "Turbid: " + String(sensorData.turbidity) + " NTU";
+          mqttClient.publish(prevSubTopic,dataToPublish.c_str());
         }
       }
     }
