@@ -1,0 +1,27 @@
+NODE [Arduino Nano]:
+1. PH sensor -> A0
+2. DS18B20 sensor -> 2
+3. TDS VCC control pin -> 3
+4. TDS GND control pin -> 4
+5. TDS signal pin -> A1
+6. Turbidity sensor -> A2
+7. MNI interface: (Software Serial RX: 6, TX: 7)
+
+All sensors are powered with 5V
+
+MASTER [ESP32]:
+1. LCD: (SDA: 21, SCL: 22)
+2. MNI interface: (Serial2 RX: 16, Serial2 TX: 17)
+
+MNI Serial interface wiring:
+* NANO TX(7) -- ESP32 RX(16)
+* NANO RX(6) -- ESP32 TX(17)
+
+--Turbidity sensor interface board:
+Board pins:
+*G = Ground
+*A = Analog output (connected to analog pin of Arduino Nano)
+*V = Vcc (5V)
+*1 = Red wire of turbidity sensor 
+*2 = Blue wire of turbidity sensor
+*3 = Yellow wire of turbidity sensor
