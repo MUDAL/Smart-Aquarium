@@ -52,13 +52,13 @@ void loop()
       Serial.println(ph,1);   
       Serial.print("Temperature = ");
       Serial.print(temperature);
-      Serial.println("C");
+      Serial.println(" C");
       Serial.print("TDS = ");
       Serial.print(tds);
-      Serial.println("ppm");
+      Serial.println(" ppm");
       Serial.print("Turbidity = ");
       Serial.print(turbidity);
-      Serial.println("NTU\n"); 
+      Serial.println(" NTU\n"); 
       
       mni.EncodeData(MNI::ACK,MNI::TxDataId::DATA_ACK);
       mni.EncodeData((ph * 10),MNI::TxDataId::PH);
