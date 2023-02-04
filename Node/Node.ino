@@ -5,9 +5,6 @@
 #include "TDS.h"
 #include "Turbidity.h"
 
-//Algorithm: Read PH(first),temperature(second),TDS(last) and .....
-//repeat the sequence periodically.
-
 namespace Pin
 {
   const uint8_t phSensor = A0;
@@ -45,7 +42,7 @@ void loop()
       float ph = phSensor.GetValue();
       float temperature = temperatureSensor.GetValue();
       uint16_t tds = tdsSensor.GetValue(temperature);
-      uint16_t turbidity = turbiditySensor.GetValue();
+      float turbidity = turbiditySensor.GetValue();
 
       //Debug
       Serial.print("PH: ");
@@ -57,14 +54,14 @@ void loop()
       Serial.print(tds);
       Serial.println(" ppm");
       Serial.print("Turbidity = ");
-      Serial.print(turbidity);
+      Serial.print(turbidity,1);
       Serial.println(" NTU\n"); 
       
       mni.EncodeData(MNI::ACK,MNI::TxDataId::DATA_ACK);
       mni.EncodeData((ph * 10),MNI::TxDataId::PH);
       mni.EncodeData((temperature * 100),MNI::TxDataId::TEMPERATURE);
       mni.EncodeData(tds,MNI::TxDataId::TDS);
-      mni.EncodeData(turbidity,MNI::TxDataId::TURBIDITY);
+      mni.EncodeData((turbidity * 10),MNI::TxDataId::TURBIDITY);
       mni.TransmitData();
     }
   }

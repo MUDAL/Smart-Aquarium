@@ -19,7 +19,7 @@ typedef struct
   float ph;
   float temperature;
   uint16_t tds;
-  uint16_t turbidity;  
+  float turbidity;  
 }sensor_t;
 
 //RTOS Handle(s)
@@ -203,7 +203,7 @@ void ApplicationTask(void* pvParameters)
         lcd.print("ppm    ");
         lcd.setCursor(0,1);
         lcd.print("TURB: ");
-        lcd.print(sensorData.turbidity);
+        lcd.print(sensorData.turbidity,1);
         lcd.print("NTU    ");
         if((millis() - prevTime) >= 2000)
         {
@@ -241,13 +241,13 @@ void NodeTask(void* pvParameters)
     {
       if(mni.DecodeData(MNI::RxDataId::DATA_ACK) == MNI::ACK)
       {
-        //Divide received PH and temperature data by 10 and 100 ...
+        //Divide received PH,temperature,and turbidity data by 10,100,and 10 ...
         //respectively in order to get the actual readings.
         Serial.println("--Received serial data from node\n");
         sensorData.ph = mni.DecodeData(MNI::RxDataId::PH) / 10.0; 
         sensorData.temperature = mni.DecodeData(MNI::RxDataId::TEMPERATURE) / 100.0; 
         sensorData.tds = mni.DecodeData(MNI::RxDataId::TDS);
-        sensorData.turbidity = mni.DecodeData(MNI::RxDataId::TURBIDITY);
+        sensorData.turbidity = mni.DecodeData(MNI::RxDataId::TURBIDITY) / 10.0;
         //Debug
         Serial.print("PH: ");
         Serial.println(sensorData.ph,1); 
@@ -258,7 +258,7 @@ void NodeTask(void* pvParameters)
         Serial.print(sensorData.tds); 
         Serial.println(" ppm");
         Serial.print("Turbidity: ");
-        Serial.print(sensorData.turbidity); 
+        Serial.print(sensorData.turbidity,1); 
         Serial.println(" NTU\n"); 
         //Place sensor data in the Node-Application Queue
         if(xQueueSend(nodeToAppQueue,&sensorData,0) == pdPASS)
@@ -321,7 +321,7 @@ void MqttTask(void* pvParameters)
           String dataToPublish = "PH: " + String(sensorData.ph,1) + " \n" +
                        "Temp:  " + String(sensorData.temperature,2) + " C\n" +
                        "TDS: " + String(sensorData.tds) + " ppm\n" + 
-                       "Turbid: " + String(sensorData.turbidity) + " NTU";
+                       "Turbid: " + String(sensorData.turbidity,1) + " NTU";
           mqttClient.publish(prevSubTopic,dataToPublish.c_str());
         }
       }
