@@ -7,7 +7,7 @@ Turbidity::Turbidity(uint8_t sensorPin,uint8_t numOfSamples)
   this->numOfSamples = numOfSamples;
 }
 
-int Turbidity::GetValue(void)
+float Turbidity::GetValue(void)
 {
   float avgRawData = 0;
   for(int i = 0; i < numOfSamples; i++)
@@ -16,7 +16,7 @@ int Turbidity::GetValue(void)
   }
   avgRawData = avgRawData / (float) this->numOfSamples;
   float volt = (avgRawData * 5.0) / 1024.0;  
-  int turbidity = lround(-1120.4*volt*volt + 5742.3*volt - 4352.9);
+  float turbidity = lround((-1120.4*volt*volt + 5742.3*volt - 4352.9) * 10.0) / 10.0; //round to 1dp
   if(turbidity > 3000)
   {
     turbidity = 3000;
