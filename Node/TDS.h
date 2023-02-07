@@ -8,7 +8,6 @@ class TDS
     uint8_t signalPin;
     uint8_t vccControlPin;
     uint8_t gndControlPin;
-    int startupTime;
     GravityTDS gravityTds;
     
   public:
