@@ -3,6 +3,10 @@ Water quality monitoring system
 
 Client: Favour Umukoro   
 
+## Electrical characteristics  
+- Running current: approximately 300mA  
+- Peak current: 480mA (occurs when all sensors are active and the system isn't connected to a Wi-Fi network)  
+
 ## Credits  
 1. TDS sensor sample codes: https://wiki.dfrobot.com/Gravity__Analog_TDS_Sensor___Meter_For_Arduino_SKU__SEN0244   
 2. Turbidity sensor sample codes and equation: https://wiki.dfrobot.com/Turbidity_sensor_SKU__SEN0189#target_5   
