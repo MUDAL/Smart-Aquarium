@@ -192,7 +192,7 @@ void ApplicationTask(void* pvParameters)
         lcd.print("TEMP: ");
         lcd.print(sensorData.temperature,2);
         lcd.print("C    ");
-        if((millis() - prevTime) >= 2000)
+        if((millis() - prevTime) >= 5000)
         {
           displayState = displayState2;
           prevTime = millis();
@@ -209,7 +209,7 @@ void ApplicationTask(void* pvParameters)
         lcd.print("TURB: ");
         lcd.print(sensorData.turbidity,1);
         lcd.print("NTU    ");
-        if((millis() - prevTime) >= 2000)
+        if((millis() - prevTime) >= 5000)
         {
           displayState = displayState1;
           prevTime = millis();
