@@ -54,7 +54,7 @@ void loop()
       Serial.print(tds);
       Serial.println(" ppm");
       Serial.print("Turbidity = ");
-      Serial.print(turbidityInVolts,1);
+      Serial.print(turbidityInVolts,2);
       Serial.println(" [V]\n"); 
       
       mni.EncodeData(MNI::ACK,MNI::TxDataId::DATA_ACK);
