@@ -7,7 +7,7 @@ Turbidity::Turbidity(uint8_t sensorPin,uint8_t numOfSamples)
   this->numOfSamples = numOfSamples;
 }
 
-float Turbidity::GetValue(void)
+float Turbidity::GetOutputVoltage(void)
 {
   float avgRawData = 0;
   for(int i = 0; i < numOfSamples; i++)
@@ -15,15 +15,6 @@ float Turbidity::GetValue(void)
     avgRawData += analogRead(this->sensorPin);  
   }
   avgRawData = avgRawData / (float) this->numOfSamples;
-  float volt = (avgRawData * 5.0) / 1024.0;  
-  float turbidity = lround((-1120.4*volt*volt + 5742.3*volt - 4352.9) * 10.0) / 10.0; //round to 1dp
-  if(turbidity > 3000)
-  {
-    turbidity = 3000;
-  }
-  else if(turbidity < 0)
-  {
-    turbidity = 0;
-  }
-  return turbidity;
+  float turbidityInVolts = (avgRawData * 5.0) / 1024.0;  
+  return turbidityInVolts;
 }
