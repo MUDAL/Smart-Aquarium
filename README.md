@@ -12,7 +12,7 @@ and turbidity sensors, to provide comprehensive information about water quality.
 3. Sensor data acquisition and management using an Arduino Nano.   
 4. Multiple sensors for comprehensive information about water quality (PH, TDS, temperature, and turbidity sensors).   
 5. Periodic display of measured data on an LCD display.   
-6. Data upload to a mobile phone or computer via MQTT for remote access and analysis.    
+6. Periodic uploading of sensor data to a mobile phone or computer via MQTT for remote access and analysis.    
 7. Wi-Fi provisioning.  
 
 ## Challenges and Solutions  
