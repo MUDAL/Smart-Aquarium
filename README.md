@@ -30,7 +30,9 @@ I used transistors to switch off the TDS sensor when readings were taken from th
 - Running current: approximately 300mA  
 - Peak current: 480mA (occurs when all sensors are active and the system isn't connected to a Wi-Fi network)  
 
-![20230214_100451](https://user-images.githubusercontent.com/46250887/218694710-b80014f1-94da-4017-b66a-1ba3daf20b35.jpg)
+## Images of prototype  
+![Meh](https://user-images.githubusercontent.com/46250887/222832138-21d3c1ae-b202-4d82-ab10-050cc7b679d3.jpg)  
+![Meh2](https://user-images.githubusercontent.com/46250887/222832470-6972eda9-8dfd-49b4-ab25-4dfadd23d7ae.jpg)  
 ![20230214_100459](https://user-images.githubusercontent.com/46250887/218694781-e6b665ba-9ee9-4f62-9a08-3a1ccbf7d70a.jpg)
 ![20230214_100649](https://user-images.githubusercontent.com/46250887/218694830-41035e25-18c0-4081-9bff-4c0f38eed98d.jpg)
 
