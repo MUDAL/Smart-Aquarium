@@ -2,7 +2,7 @@
 
 ## Description  
 The Smart Aquarium System is a device that monitors water quality in real-time for aquariums.  
-This system utilizes an ESP32 and an Arduino Nano to enable wireless communication and sensor  
+This system utilizes an ESP32 [Master] and an Arduino Nano [Node] to enable wireless communication and sensor  
 data acquisition and management, respectively. It includes multiple sensors, such as PH, TDS, temperature,  
 and turbidity sensors, to provide comprehensive information about water quality.   
 
