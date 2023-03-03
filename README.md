@@ -34,7 +34,8 @@ I used transistors to switch off the TDS sensor when readings were taken from th
 ![Meh](https://user-images.githubusercontent.com/46250887/222832138-21d3c1ae-b202-4d82-ab10-050cc7b679d3.jpg)  
 ![Meh2](https://user-images.githubusercontent.com/46250887/222832470-6972eda9-8dfd-49b4-ab25-4dfadd23d7ae.jpg)  
 ![20230214_100459](https://user-images.githubusercontent.com/46250887/218694781-e6b665ba-9ee9-4f62-9a08-3a1ccbf7d70a.jpg)
-![20230214_100649](https://user-images.githubusercontent.com/46250887/218694830-41035e25-18c0-4081-9bff-4c0f38eed98d.jpg)
+![20230214_100649](https://user-images.githubusercontent.com/46250887/218694830-41035e25-18c0-4081-9bff-4c0f38eed98d.jpg)  
+![20230219_135955](https://user-images.githubusercontent.com/46250887/222833043-f97b9952-690e-4195-927c-10c8e25122f5.jpg)  
 
 ## Credits  
 1. TDS sensor sample codes: https://wiki.dfrobot.com/Gravity__Analog_TDS_Sensor___Meter_For_Arduino_SKU__SEN0244   
