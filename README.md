@@ -26,6 +26,9 @@ I used transistors to switch off the TDS sensor when readings were taken from th
 - The ESP-IDF FreeRTOS was used for concurrent task execution by the ESP32.     
 - The HiveMQ broker was used to link the MQTT client running on the mobile phone with the ESP32.    
 
+## Software architecture  
+![ss_sl drawio](https://user-images.githubusercontent.com/46250887/224770505-3b998808-d45e-4bd0-b01b-96e269d378f5.png)  
+
 ## Electrical characteristics  
 - Running current: approximately 300mA  
 - Peak current: 480mA (occurs when all sensors are active and the system isn't connected to a Wi-Fi network)  
@@ -42,4 +45,7 @@ I used transistors to switch off the TDS sensor when readings were taken from th
 2. Turbidity sensor sample codes and equation: https://wiki.dfrobot.com/Turbidity_sensor_SKU__SEN0189#target_5   
 3. Helpful info from ``Electronic Clinic``: https://www.youtube.com/watch?v=rguFeznEELs&t=944s  
 
+## Recommendations  
+1. Use of accurate sensors for future designs  
+2. Power optimization through the selection of better components as well as a more efficient firmware.  
 
