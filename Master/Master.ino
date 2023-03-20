@@ -41,6 +41,47 @@ static void StoreNewFlashData(const char* flashLoc,const char* newData,
   }
 }
 
+/**
+ * @brief Converts an integer to a string.
+*/
+static void IntegerToString(uint32_t integer,char* stringPtr)
+{
+  if(integer == 0)
+  {  
+    stringPtr[0] = '0';
+    return;
+  }
+  uint32_t integerCopy = integer;
+  uint8_t numOfDigits = 0;
+
+  while(integerCopy > 0)
+  {
+    integerCopy /= 10;
+    numOfDigits++;
+  }
+  while(integer > 0)
+  {
+    stringPtr[numOfDigits - 1] = '0' + (integer % 10);
+    integer /= 10;
+    numOfDigits--;
+  }
+}
+
+/**
+ * @brief Converts a float to a string.
+*/
+static void FloatToString(float floatPt,char* stringPtr,uint32_t multiplier)
+{
+  uint32_t floatAsInt = lround(floatPt * multiplier);
+  char quotientBuff[20] = {0};
+  char remainderBuff[20] = {0};
+  IntegerToString((floatAsInt / multiplier),quotientBuff);
+  IntegerToString((floatAsInt % multiplier),remainderBuff);
+  strcat(stringPtr,quotientBuff);
+  strcat(stringPtr,".");
+  strcat(stringPtr,remainderBuff);
+}
+
 void setup() 
 {
   setCpuFrequencyMhz(80);
@@ -208,7 +249,7 @@ void ApplicationTask(void* pvParameters)
         lcd.setCursor(0,1);
         lcd.print("TURB: ");
         lcd.print(sensorData.turbidityInVolts,2);
-        lcd.print("[V]");
+        lcd.print("[V]    ");
         if((millis() - prevTime) >= 5000)
         {
           displayState = displayState1;
@@ -256,18 +297,6 @@ void NodeTask(void* pvParameters)
         sensorData.temperature = mni.DecodeData(MNI::RxDataId::TEMPERATURE) / 100.0; 
         sensorData.tds = mni.DecodeData(MNI::RxDataId::TDS);
         sensorData.turbidityInVolts = mni.DecodeData(MNI::RxDataId::TURBIDITY) / 100.0;
-        //Debug
-        Serial.print("PH: ");
-        Serial.println(sensorData.ph,1); 
-        Serial.print("Temperature: ");
-        Serial.print(sensorData.temperature,2); 
-        Serial.println(" C");
-        Serial.print("TDS: ");
-        Serial.print(sensorData.tds); 
-        Serial.println(" ppm");
-        Serial.print("Turbidity: ");
-        Serial.print(sensorData.turbidityInVolts,2); 
-        Serial.println(" [V]\n"); 
         //Place sensor data in the Node-Application Queue
         if(xQueueSend(nodeToAppQueue,&sensorData,0) == pdPASS)
         {
@@ -299,6 +328,8 @@ void MqttTask(void* pvParameters)
   static sensor_t sensorData;
   static WiFiClient wifiClient;
   static PubSubClient mqttClient(wifiClient);
+  static char dataToPublish[120];
+  
   char prevSubTopic[SIZE_TOPIC] = {0};
   const char *mqttBroker = "broker.hivemq.com";
   const uint16_t mqttPort = 1883;  
@@ -326,11 +357,33 @@ void MqttTask(void* pvParameters)
         if(xQueueReceive(nodeToMqttQueue,&sensorData,0) == pdPASS)
         {
           Serial.println("--MQTT task received data from Node task\n");
-          String dataToPublish = "PH: " + String(sensorData.ph,1) + " \n" +
-                       "Temp:  " + String(sensorData.temperature,2) + " C\n" +
-                       "TDS: " + String(sensorData.tds) + " ppm\n" + 
-                       "Turbid: " + String(sensorData.turbidityInVolts,2) + " [V]";
-          mqttClient.publish(prevSubTopic,dataToPublish.c_str());
+
+          char phBuff[5] = {0};
+          char temperatureBuff[7] = {0};
+          char tdsBuff[11] = {0};
+          char turbidityBuff[5] = {0};
+
+          FloatToString(sensorData.ph,phBuff,10);
+          FloatToString(sensorData.temperature,temperatureBuff,100);
+          IntegerToString(sensorData.tds,tdsBuff);
+          FloatToString(sensorData.turbidityInVolts,turbidityBuff,100);
+
+          strcat(dataToPublish,"PH: ");
+          strcat(dataToPublish,phBuff);
+          strcat(dataToPublish," \n");
+          strcat(dataToPublish,"Temp:  ");
+          strcat(dataToPublish,temperatureBuff);
+          strcat(dataToPublish," C\n");
+          strcat(dataToPublish,"TDS:  ");
+          strcat(dataToPublish,tdsBuff);
+          strcat(dataToPublish," ppm\n");
+          strcat(dataToPublish,"Turbid:  ");
+          strcat(dataToPublish,turbidityBuff);
+          strcat(dataToPublish," [V]");
+                    
+          mqttClient.publish(prevSubTopic,dataToPublish);
+          uint32_t dataLen = strlen(dataToPublish);
+          memset(dataToPublish,'\0',dataLen);
         }
       }
     }
