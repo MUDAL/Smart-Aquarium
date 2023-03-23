@@ -7,10 +7,13 @@
 #include <LiquidCrystal_I2C.h> //Version 1.1.2
 #include "MNI.h"
 
-//Maximum number of characters for HiveMQ topic(s)
+//Maximum number of characters
 #define SIZE_TOPIC             30
-//Define textbox for MQTT publish topic
+#define SIZE_CLIENT_ID         23
+
+//Textboxes
 WiFiManagerParameter subTopic("0","HiveMQ Subscription topic","",SIZE_TOPIC);
+WiFiManagerParameter clientID("A","MQTT client ID","",SIZE_CLIENT_ID);
 Preferences preferences; //for accessing ESP32 flash memory
 
 //Type(s)
@@ -70,15 +73,27 @@ static void IntegerToString(uint32_t integer,char* stringPtr)
 /**
  * @brief Converts a float to a string.
 */
-static void FloatToString(float floatPt,char* stringPtr,uint32_t multiplier)
+static void FloatToString(float floatPt,char* stringPtr,uint8_t decimalPlaces)
 {
+  uint32_t multiplier = 1;
+  for(uint8_t i = 0; i < decimalPlaces; i++)
+  {
+    multiplier *= 10;
+  }  
   uint32_t floatAsInt = lround(floatPt * multiplier);
   char quotientBuff[20] = {0};
   char remainderBuff[20] = {0};
+  
   IntegerToString((floatAsInt / multiplier),quotientBuff);
   IntegerToString((floatAsInt % multiplier),remainderBuff);
   strcat(stringPtr,quotientBuff);
   strcat(stringPtr,".");
+  uint8_t remainderLen = strlen(remainderBuff);
+  while(remainderLen < decimalPlaces)
+  {
+    strcat(stringPtr,"0");
+    remainderLen++;
+  }  
   strcat(stringPtr,remainderBuff);
 }
 
@@ -126,6 +141,7 @@ void WiFiManagementTask(void* pvParameters)
   static WiFiManager wm;
   WiFi.mode(WIFI_STA);  
   wm.addParameter(&subTopic);
+  wm.addParameter(&clientID);
   wm.setConfigPortalBlocking(false);
   wm.setSaveParamsCallback(WiFiManagerCallback);   
   //Auto-connect to previous network if available.
@@ -331,6 +347,7 @@ void MqttTask(void* pvParameters)
   static char dataToPublish[120];
   
   char prevSubTopic[SIZE_TOPIC] = {0};
+  char prevClientID[SIZE_CLIENT_ID] = {0};
   const char *mqttBroker = "broker.hivemq.com";
   const uint16_t mqttPort = 1883;  
   
@@ -340,12 +357,14 @@ void MqttTask(void* pvParameters)
     {       
       if(!mqttClient.connected())
       { 
+        memset(prevSubTopic,'\0',SIZE_TOPIC);
+        memset(prevClientID,'\0',SIZE_CLIENT_ID);
         preferences.getBytes("0",prevSubTopic,SIZE_TOPIC);
+        preferences.getBytes("A",prevClientID,SIZE_CLIENT_ID);
         mqttClient.setServer(mqttBroker,mqttPort);
         while(!mqttClient.connected())
         {
-          String clientID = String(WiFi.macAddress());
-          if(mqttClient.connect(clientID.c_str()))
+          if(mqttClient.connect(prevClientID))
           {
             Serial.println("Connected to HiveMQ broker");
           }
@@ -363,10 +382,10 @@ void MqttTask(void* pvParameters)
           char tdsBuff[11] = {0};
           char turbidityBuff[5] = {0};
 
-          FloatToString(sensorData.ph,phBuff,10);
-          FloatToString(sensorData.temperature,temperatureBuff,100);
+          FloatToString(sensorData.ph,phBuff,1);
+          FloatToString(sensorData.temperature,temperatureBuff,2);
           IntegerToString(sensorData.tds,tdsBuff);
-          FloatToString(sensorData.turbidityInVolts,turbidityBuff,100);
+          FloatToString(sensorData.turbidityInVolts,turbidityBuff,2);
 
           strcat(dataToPublish,"PH: ");
           strcat(dataToPublish,phBuff);
@@ -397,6 +416,9 @@ void MqttTask(void* pvParameters)
 void WiFiManagerCallback(void) 
 {
   char prevSubTopic[SIZE_TOPIC] = {0};
+  char prevClientID[SIZE_CLIENT_ID] = {0};
   preferences.getBytes("0",prevSubTopic,SIZE_TOPIC);
+  preferences.getBytes("A",prevClientID,SIZE_CLIENT_ID);
   StoreNewFlashData("0",subTopic.getValue(),prevSubTopic,SIZE_TOPIC);
+  StoreNewFlashData("A",clientID.getValue(),prevClientID,SIZE_CLIENT_ID);
 }
