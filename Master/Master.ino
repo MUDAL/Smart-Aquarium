@@ -22,7 +22,7 @@ typedef struct
   float ph;
   float temperature;
   uint16_t tds;
-  float turbidityInVolts;  
+  float turbidity;  
 }sensor_t;
 
 //RTOS Handle(s)
@@ -264,8 +264,8 @@ void ApplicationTask(void* pvParameters)
         lcd.print("ppm    ");
         lcd.setCursor(0,1);
         lcd.print("TURB: ");
-        lcd.print(sensorData.turbidityInVolts,2);
-        lcd.print("[V]    ");
+        lcd.print(sensorData.turbidity,1);
+        lcd.print("NTU    ");
         if((millis() - prevTime) >= 5000)
         {
           displayState = displayState1;
@@ -312,7 +312,7 @@ void NodeTask(void* pvParameters)
         sensorData.ph = mni.DecodeData(MNI::RxDataId::PH) / 10.0; 
         sensorData.temperature = mni.DecodeData(MNI::RxDataId::TEMPERATURE) / 100.0; 
         sensorData.tds = mni.DecodeData(MNI::RxDataId::TDS);
-        sensorData.turbidityInVolts = mni.DecodeData(MNI::RxDataId::TURBIDITY) / 100.0;
+        sensorData.turbidity = mni.DecodeData(MNI::RxDataId::TURBIDITY) / 10.0;
         //Place sensor data in the Node-Application Queue
         if(xQueueSend(nodeToAppQueue,&sensorData,0) == pdPASS)
         {
@@ -385,7 +385,7 @@ void MqttTask(void* pvParameters)
           FloatToString(sensorData.ph,phBuff,1);
           FloatToString(sensorData.temperature,temperatureBuff,2);
           IntegerToString(sensorData.tds,tdsBuff);
-          FloatToString(sensorData.turbidityInVolts,turbidityBuff,2);
+          FloatToString(sensorData.turbidity,turbidityBuff,1);
 
           strcat(dataToPublish,"PH: ");
           strcat(dataToPublish,phBuff);
@@ -398,7 +398,7 @@ void MqttTask(void* pvParameters)
           strcat(dataToPublish," ppm\n");
           strcat(dataToPublish,"Turbid:  ");
           strcat(dataToPublish,turbidityBuff);
-          strcat(dataToPublish," [V]");
+          strcat(dataToPublish," NTU");
                     
           mqttClient.publish(prevSubTopic,dataToPublish);
           uint32_t dataLen = strlen(dataToPublish);
