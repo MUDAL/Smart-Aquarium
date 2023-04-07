@@ -42,7 +42,7 @@ void loop()
       float ph = phSensor.GetValue();
       float temperature = temperatureSensor.GetValue();
       uint16_t tds = tdsSensor.GetValue(temperature);
-      float turbidityInVolts = turbiditySensor.GetOutputVoltage();
+      float turbidity = turbiditySensor.GetValue();
 
       //Debug
       Serial.print("PH: ");
@@ -54,14 +54,14 @@ void loop()
       Serial.print(tds);
       Serial.println(" ppm");
       Serial.print("Turbidity = ");
-      Serial.print(turbidityInVolts,2);
-      Serial.println(" [V]\n"); 
+      Serial.print(turbidity,1);
+      Serial.println(" NTU\n"); 
       
       mni.EncodeData(MNI::ACK,MNI::TxDataId::DATA_ACK);
       mni.EncodeData((ph * 10),MNI::TxDataId::PH);
       mni.EncodeData((temperature * 100),MNI::TxDataId::TEMPERATURE);
       mni.EncodeData(tds,MNI::TxDataId::TDS);
-      mni.EncodeData((turbidityInVolts * 100),MNI::TxDataId::TURBIDITY);
+      mni.EncodeData((turbidity * 10),MNI::TxDataId::TURBIDITY);
       mni.TransmitData();
     }
   }
