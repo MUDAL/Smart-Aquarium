@@ -364,7 +364,7 @@ void MqttTask(void* pvParameters)
   static sensor_t sensorData;
   static WiFiClient wifiClient;
   static PubSubClient mqttClient(wifiClient);
-  static char dataToPublish[1000];
+  static char dataToPublish[400];
   
   char prevSubTopic[SIZE_TOPIC] = {0};
   char prevClientID[SIZE_CLIENT_ID] = {0};
@@ -410,48 +410,21 @@ void MqttTask(void* pvParameters)
           preferences.getBytes("9",prevMaxTds,SIZE_THRESHOLD);
 
           strcat(dataToPublish,"Limits:\n");
-          strcat(dataToPublish,"Minimum PH: ");
+          strcat(dataToPublish,"PH:");
           strcat(dataToPublish,prevMinPh);
-          strcat(dataToPublish," \n");
-          strcat(dataToPublish,"Maximum PH:  ");
+          strcat(dataToPublish,"-");
           strcat(dataToPublish,prevMaxPh);
-          strcat(dataToPublish," \n");
-          strcat(dataToPublish,"Minimum temperature: ");
+          strcat(dataToPublish,"\n");
+          strcat(dataToPublish,"TEMP:");
           strcat(dataToPublish,prevMinTemp);
-          strcat(dataToPublish," C\n");
-          strcat(dataToPublish,"Maximum temperature: ");
+          strcat(dataToPublish,"-");
           strcat(dataToPublish,prevMaxTemp);
-          strcat(dataToPublish," C\n");          
-          strcat(dataToPublish,"Minimum TDS: ");
+          strcat(dataToPublish,"C\n");
+          strcat(dataToPublish,"TDS:");          
           strcat(dataToPublish,prevMinTds);
-          strcat(dataToPublish," ppm\n");
-          strcat(dataToPublish,"Maximum TDS: ");
+          strcat(dataToPublish,"-");
           strcat(dataToPublish,prevMaxTds);
-          strcat(dataToPublish," ppm\n\n");          
-                              
-          char phBuff[5] = {0};
-          char temperatureBuff[7] = {0};
-          char tdsBuff[11] = {0};
-          char turbidityBuff[5] = {0};
-
-          FloatToString(sensorData.ph,phBuff,1);
-          FloatToString(sensorData.temperature,temperatureBuff,2);
-          IntegerToString(sensorData.tds,tdsBuff);
-          FloatToString(sensorData.turbidity,turbidityBuff,1);
-
-          strcat(dataToPublish,"Readings:\n");
-          strcat(dataToPublish,"PH: ");
-          strcat(dataToPublish,phBuff);
-          strcat(dataToPublish," \n");
-          strcat(dataToPublish,"Temp:  ");
-          strcat(dataToPublish,temperatureBuff);
-          strcat(dataToPublish," C\n");
-          strcat(dataToPublish,"TDS:  ");
-          strcat(dataToPublish,tdsBuff);
-          strcat(dataToPublish," ppm\n");
-          strcat(dataToPublish,"Turbid:  ");
-          strcat(dataToPublish,turbidityBuff);
-          strcat(dataToPublish," NTU\n\n");
+          strcat(dataToPublish,"ppm\n\n");          
 
           limit_t sensorLim = {};
           StringToFloat(prevMinPh,&sensorLim.minPh);
@@ -468,13 +441,13 @@ void MqttTask(void* pvParameters)
           bool isTdsLow = sensorData.tds < lround(sensorLim.minTds);
           bool isTdsHigh = sensorData.tds > lround(sensorLim.maxTds);
 
-          strcat(dataToPublish,"Warning(s):\n");
-          AddStringIfTrue(dataToPublish,"PH is LOW!!!\n",isPhLow);
-          AddStringIfTrue(dataToPublish,"PH is HIGH!!!\n",isPhHigh);
-          AddStringIfTrue(dataToPublish,"Temperature is LOW!!!\n",isTempLow);
-          AddStringIfTrue(dataToPublish,"Temperature is HIGH!!!\n",isTempHigh);
-          AddStringIfTrue(dataToPublish,"TDS is LOW!!!\n",isTdsLow);
-          AddStringIfTrue(dataToPublish,"TDS is HIGH!!!\n",isTdsHigh);
+          strcat(dataToPublish,"Note:\n");
+          AddStringIfTrue(dataToPublish,"LOW PH\n",isPhLow);
+          AddStringIfTrue(dataToPublish,"HIGH PH\n",isPhHigh);
+          AddStringIfTrue(dataToPublish,"LOW TEMP\n",isTempLow);
+          AddStringIfTrue(dataToPublish,"HIGH TEMP\n",isTempHigh);
+          AddStringIfTrue(dataToPublish,"LOW TDS\n",isTdsLow);
+          AddStringIfTrue(dataToPublish,"HIGH TDS\n",isTdsHigh);
 
           if(isPhLow || isPhHigh || isTempLow || isTempHigh || isTdsLow || isTdsHigh)
           {
