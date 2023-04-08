@@ -461,10 +461,10 @@ void MqttTask(void* pvParameters)
           StringToFloat(prevMinTds,&sensorLim.minTds);
           StringToFloat(prevMaxTds,&sensorLim.maxTds);
 
-          bool isPhLow = lround(sensorData.ph * 10) < lround(sensorLim.minPh);
-          bool isPhHigh = lround(sensorData.ph * 10) > lround(sensorLim.maxPh);
-          bool isTempLow = lround(sensorData.temperature * 100) < lround(sensorLim.minTemp);
-          bool isTempHigh = lround(sensorData.temperature * 100) > lround(sensorLim.maxTemp);
+          bool isPhLow = lround(sensorData.ph * 10) < lround(sensorLim.minPh * 10);
+          bool isPhHigh = lround(sensorData.ph * 10) > lround(sensorLim.maxPh * 10);
+          bool isTempLow = lround(sensorData.temperature * 100) < lround(sensorLim.minTemp * 100);
+          bool isTempHigh = lround(sensorData.temperature * 100) > lround(sensorLim.maxTemp * 100);
           bool isTdsLow = sensorData.tds < lround(sensorLim.minTds);
           bool isTdsHigh = sensorData.tds > lround(sensorLim.maxTds);
 
