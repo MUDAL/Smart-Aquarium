@@ -5,15 +5,28 @@
 #include <PubSubClient.h>
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h> //Version 1.1.2
+#include "ThingSpeak.h" //Version 2.0.1
 #include "MNI.h"
+#include "numeric_lib.h"
 
 //Maximum number of characters
 #define SIZE_TOPIC             30
 #define SIZE_CLIENT_ID         23
+#define SIZE_CHANNEL_ID        30
+#define SIZE_API_KEY           50
+#define SIZE_THRESHOLD         20
 
 //Textboxes
 WiFiManagerParameter subTopic("0","HiveMQ Subscription topic","",SIZE_TOPIC);
 WiFiManagerParameter clientID("A","MQTT client ID","",SIZE_CLIENT_ID);
+WiFiManagerParameter channelId("2","ThingSpeak channel ID","",SIZE_CHANNEL_ID);
+WiFiManagerParameter apiKey("3","ThingSpeak API key","",SIZE_API_KEY);
+WiFiManagerParameter minPh("4","Minimum PH","",SIZE_THRESHOLD);
+WiFiManagerParameter maxPh("5","Maximum PH","",SIZE_THRESHOLD);
+WiFiManagerParameter minTemp("6","Minimum temperature","",SIZE_THRESHOLD);
+WiFiManagerParameter maxTemp("7","Maximum temperature","",SIZE_THRESHOLD);
+WiFiManagerParameter minTds("8","Minimum TDS","",SIZE_THRESHOLD);
+WiFiManagerParameter maxTds("9","Maximum TDS","",SIZE_THRESHOLD);
 Preferences preferences; //for accessing ESP32 flash memory
 
 //Type(s)
@@ -24,6 +37,16 @@ typedef struct
   uint16_t tds;
   float turbidity;  
 }sensor_t;
+
+typedef struct
+{
+  float minPh;
+  float maxPh;
+  float minTemp;
+  float maxTemp;
+  float minTds;
+  float maxTds;
+}limit_t;
 
 //RTOS Handle(s)
 TaskHandle_t wifiTaskHandle;
@@ -45,56 +68,14 @@ static void StoreNewFlashData(const char* flashLoc,const char* newData,
 }
 
 /**
- * @brief Converts an integer to a string.
+ * @brief Append str2 to str1 if 'condition' is true.
 */
-static void IntegerToString(uint32_t integer,char* stringPtr)
+static void AddStringIfTrue(char* str1,char* str2,bool condition)
 {
-  if(integer == 0)
-  {  
-    stringPtr[0] = '0';
-    return;
+  if(condition)
+  {
+    strcat(str1,str2);
   }
-  uint32_t integerCopy = integer;
-  uint8_t numOfDigits = 0;
-
-  while(integerCopy > 0)
-  {
-    integerCopy /= 10;
-    numOfDigits++;
-  }
-  while(integer > 0)
-  {
-    stringPtr[numOfDigits - 1] = '0' + (integer % 10);
-    integer /= 10;
-    numOfDigits--;
-  }
-}
-
-/**
- * @brief Converts a float to a string.
-*/
-static void FloatToString(float floatPt,char* stringPtr,uint8_t decimalPlaces)
-{
-  uint32_t multiplier = 1;
-  for(uint8_t i = 0; i < decimalPlaces; i++)
-  {
-    multiplier *= 10;
-  }  
-  uint32_t floatAsInt = lround(floatPt * multiplier);
-  char quotientBuff[20] = {0};
-  char remainderBuff[20] = {0};
-  
-  IntegerToString((floatAsInt / multiplier),quotientBuff);
-  IntegerToString((floatAsInt % multiplier),remainderBuff);
-  strcat(stringPtr,quotientBuff);
-  strcat(stringPtr,".");
-  uint8_t remainderLen = strlen(remainderBuff);
-  while(remainderLen < decimalPlaces)
-  {
-    strcat(stringPtr,"0");
-    remainderLen++;
-  }  
-  strcat(stringPtr,remainderBuff);
 }
 
 void setup() 
@@ -121,7 +102,7 @@ void setup()
     Serial.println("Node-MQTT Queue failed");
   }  
   xTaskCreatePinnedToCore(WiFiManagementTask,"",7000,NULL,1,&wifiTaskHandle,1);
-  xTaskCreatePinnedToCore(ApplicationTask,"",30000,NULL,1,NULL,1);
+  xTaskCreatePinnedToCore(ApplicationTask,"",50000,NULL,1,NULL,1);
   xTaskCreatePinnedToCore(NodeTask,"",25000,NULL,1,&nodeTaskHandle,1);
   xTaskCreatePinnedToCore(MqttTask,"",7000,NULL,1,NULL,1);
 }
@@ -142,6 +123,14 @@ void WiFiManagementTask(void* pvParameters)
   WiFi.mode(WIFI_STA);  
   wm.addParameter(&subTopic);
   wm.addParameter(&clientID);
+  wm.addParameter(&channelId);
+  wm.addParameter(&apiKey);  
+  wm.addParameter(&minPh);
+  wm.addParameter(&maxPh);
+  wm.addParameter(&minTemp);
+  wm.addParameter(&maxTemp);
+  wm.addParameter(&minTds);
+  wm.addParameter(&maxTds);  
   wm.setConfigPortalBlocking(false);
   wm.setSaveParamsCallback(WiFiManagerCallback);   
   //Auto-connect to previous network if available.
@@ -194,10 +183,16 @@ void WiFiManagementTask(void* pvParameters)
 */
 void ApplicationTask(void* pvParameters)
 {
+  static WiFiClient wifiClient;
   static LiquidCrystal_I2C lcd(0x27,16,2);
   static sensor_t sensorData;
+  ThingSpeak.begin(wifiClient);
   bool isWifiTaskSuspended = false;
-  
+  //Previously stored data (in ESP32's flash)
+  char prevChannelId[SIZE_CHANNEL_ID] = {0};
+  char prevApiKey[SIZE_API_KEY] = {0};
+
+  uint32_t prevConnectTime = millis();
   //Startup message
   lcd.init();
   lcd.backlight();
@@ -273,7 +268,32 @@ void ApplicationTask(void* pvParameters)
           lcd.clear();
         }
         break;
-    }      
+    }
+    //Send data to ThingSpeak [periodically]
+    if(WiFi.status() == WL_CONNECTED && ((millis() - prevConnectTime) >= 20000))
+    {
+      preferences.getBytes("2",prevChannelId,SIZE_CHANNEL_ID);
+      preferences.getBytes("3",prevApiKey,SIZE_API_KEY);
+      //Encode sensor data
+      ThingSpeak.setField(1,sensorData.ph);
+      ThingSpeak.setField(2,sensorData.temperature); 
+      ThingSpeak.setField(3,sensorData.tds); 
+      ThingSpeak.setField(4,sensorData.turbidity); 
+      //Convert channel ID from string to integer
+      uint32_t idInteger = 0;
+      StringToInteger(prevChannelId,&idInteger); 
+      int httpResponseCode = ThingSpeak.writeFields(idInteger,prevApiKey); //Send data to ThingSpeak  
+      if(httpResponseCode == HTTP_CODE_OK)
+      {
+        lcd.clear();
+        lcd.print("DATA UPLOAD: ");
+        lcd.setCursor(0,1);
+        lcd.print("SUCCESSFUL");
+        vTaskDelay(pdMS_TO_TICKS(2000));
+        lcd.clear();
+      }
+      prevConnectTime = millis();
+    }
   }
 }
 
@@ -344,7 +364,7 @@ void MqttTask(void* pvParameters)
   static sensor_t sensorData;
   static WiFiClient wifiClient;
   static PubSubClient mqttClient(wifiClient);
-  static char dataToPublish[120];
+  static char dataToPublish[400];
   
   char prevSubTopic[SIZE_TOPIC] = {0};
   char prevClientID[SIZE_CLIENT_ID] = {0};
@@ -375,32 +395,64 @@ void MqttTask(void* pvParameters)
         //Receive sensor data from the Node-MQTT Queue.
         if(xQueueReceive(nodeToMqttQueue,&sensorData,0) == pdPASS)
         {
-          Serial.println("--MQTT task received data from Node task\n");
+          char prevMinPh[SIZE_THRESHOLD] = {0};
+          char prevMaxPh[SIZE_THRESHOLD] = {0};
+          char prevMinTemp[SIZE_THRESHOLD] = {0};
+          char prevMaxTemp[SIZE_THRESHOLD] = {0};
+          char prevMinTds[SIZE_THRESHOLD] = {0};
+          char prevMaxTds[SIZE_THRESHOLD] = {0};     
+               
+          preferences.getBytes("4",prevMinPh,SIZE_THRESHOLD);
+          preferences.getBytes("5",prevMaxPh,SIZE_THRESHOLD);
+          preferences.getBytes("6",prevMinTemp,SIZE_THRESHOLD);
+          preferences.getBytes("7",prevMaxTemp,SIZE_THRESHOLD);
+          preferences.getBytes("8",prevMinTds,SIZE_THRESHOLD);
+          preferences.getBytes("9",prevMaxTds,SIZE_THRESHOLD);
 
-          char phBuff[5] = {0};
-          char temperatureBuff[7] = {0};
-          char tdsBuff[11] = {0};
-          char turbidityBuff[5] = {0};
+          strcat(dataToPublish,"Limits:\n");
+          strcat(dataToPublish,"PH:");
+          strcat(dataToPublish,prevMinPh);
+          strcat(dataToPublish,"-");
+          strcat(dataToPublish,prevMaxPh);
+          strcat(dataToPublish,"\n");
+          strcat(dataToPublish,"TEMP:");
+          strcat(dataToPublish,prevMinTemp);
+          strcat(dataToPublish,"-");
+          strcat(dataToPublish,prevMaxTemp);
+          strcat(dataToPublish,"C\n");
+          strcat(dataToPublish,"TDS:");          
+          strcat(dataToPublish,prevMinTds);
+          strcat(dataToPublish,"-");
+          strcat(dataToPublish,prevMaxTds);
+          strcat(dataToPublish,"ppm\n\n");          
 
-          FloatToString(sensorData.ph,phBuff,1);
-          FloatToString(sensorData.temperature,temperatureBuff,2);
-          IntegerToString(sensorData.tds,tdsBuff);
-          FloatToString(sensorData.turbidity,turbidityBuff,1);
+          limit_t sensorLim = {};
+          StringToFloat(prevMinPh,&sensorLim.minPh);
+          StringToFloat(prevMaxPh,&sensorLim.maxPh);
+          StringToFloat(prevMinTemp,&sensorLim.minTemp);
+          StringToFloat(prevMaxTemp,&sensorLim.maxTemp);
+          StringToFloat(prevMinTds,&sensorLim.minTds);
+          StringToFloat(prevMaxTds,&sensorLim.maxTds);
 
-          strcat(dataToPublish,"PH: ");
-          strcat(dataToPublish,phBuff);
-          strcat(dataToPublish," \n");
-          strcat(dataToPublish,"Temp:  ");
-          strcat(dataToPublish,temperatureBuff);
-          strcat(dataToPublish," C\n");
-          strcat(dataToPublish,"TDS:  ");
-          strcat(dataToPublish,tdsBuff);
-          strcat(dataToPublish," ppm\n");
-          strcat(dataToPublish,"Turbid:  ");
-          strcat(dataToPublish,turbidityBuff);
-          strcat(dataToPublish," NTU");
-                    
-          mqttClient.publish(prevSubTopic,dataToPublish);
+          bool isPhLow = lround(sensorData.ph * 10) < lround(sensorLim.minPh * 10);
+          bool isPhHigh = lround(sensorData.ph * 10) > lround(sensorLim.maxPh * 10);
+          bool isTempLow = lround(sensorData.temperature * 100) < lround(sensorLim.minTemp * 100);
+          bool isTempHigh = lround(sensorData.temperature * 100) > lround(sensorLim.maxTemp * 100);
+          bool isTdsLow = sensorData.tds < lround(sensorLim.minTds);
+          bool isTdsHigh = sensorData.tds > lround(sensorLim.maxTds);
+
+          strcat(dataToPublish,"Note:\n");
+          AddStringIfTrue(dataToPublish,"LOW PH\n",isPhLow);
+          AddStringIfTrue(dataToPublish,"HIGH PH\n",isPhHigh);
+          AddStringIfTrue(dataToPublish,"LOW TEMP\n",isTempLow);
+          AddStringIfTrue(dataToPublish,"HIGH TEMP\n",isTempHigh);
+          AddStringIfTrue(dataToPublish,"LOW TDS\n",isTdsLow);
+          AddStringIfTrue(dataToPublish,"HIGH TDS\n",isTdsHigh);
+
+          if(isPhLow || isPhHigh || isTempLow || isTempHigh || isTdsLow || isTdsHigh)
+          {
+            mqttClient.publish(prevSubTopic,dataToPublish); 
+          }
           uint32_t dataLen = strlen(dataToPublish);
           memset(dataToPublish,'\0',dataLen);
         }
@@ -417,8 +469,32 @@ void WiFiManagerCallback(void)
 {
   char prevSubTopic[SIZE_TOPIC] = {0};
   char prevClientID[SIZE_CLIENT_ID] = {0};
+  char prevChannelId[SIZE_CHANNEL_ID] = {0};
+  char prevApiKey[SIZE_API_KEY] = {0}; 
+  char prevMinPh[SIZE_THRESHOLD] = {0};
+  char prevMaxPh[SIZE_THRESHOLD] = {0};
+  char prevMinTemp[SIZE_THRESHOLD] = {0};
+  char prevMaxTemp[SIZE_THRESHOLD] = {0};
+  char prevMinTds[SIZE_THRESHOLD] = {0};
+  char prevMaxTds[SIZE_THRESHOLD] = {0};
   preferences.getBytes("0",prevSubTopic,SIZE_TOPIC);
   preferences.getBytes("A",prevClientID,SIZE_CLIENT_ID);
+  preferences.getBytes("2",prevChannelId,SIZE_CHANNEL_ID);
+  preferences.getBytes("3",prevApiKey,SIZE_API_KEY);  
+  preferences.getBytes("4",prevMinPh,SIZE_THRESHOLD);
+  preferences.getBytes("5",prevMaxPh,SIZE_THRESHOLD);
+  preferences.getBytes("6",prevMinTemp,SIZE_THRESHOLD);
+  preferences.getBytes("7",prevMaxTemp,SIZE_THRESHOLD);
+  preferences.getBytes("8",prevMinTds,SIZE_THRESHOLD);
+  preferences.getBytes("9",prevMaxTds,SIZE_THRESHOLD);
   StoreNewFlashData("0",subTopic.getValue(),prevSubTopic,SIZE_TOPIC);
   StoreNewFlashData("A",clientID.getValue(),prevClientID,SIZE_CLIENT_ID);
+  StoreNewFlashData("2",channelId.getValue(),prevChannelId,SIZE_CHANNEL_ID);
+  StoreNewFlashData("3",apiKey.getValue(),prevApiKey,SIZE_API_KEY); 
+  StoreNewFlashData("4",minPh.getValue(),prevMinPh,SIZE_THRESHOLD); 
+  StoreNewFlashData("5",maxPh.getValue(),prevMaxPh,SIZE_THRESHOLD); 
+  StoreNewFlashData("6",minTemp.getValue(),prevMinTemp,SIZE_THRESHOLD);
+  StoreNewFlashData("7",maxTemp.getValue(),prevMaxTemp,SIZE_THRESHOLD);
+  StoreNewFlashData("8",minTds.getValue(),prevMinTds,SIZE_THRESHOLD);
+  StoreNewFlashData("9",maxTds.getValue(),prevMaxTds,SIZE_THRESHOLD);
 }
