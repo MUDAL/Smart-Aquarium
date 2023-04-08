@@ -292,6 +292,7 @@ void ApplicationTask(void* pvParameters)
         vTaskDelay(pdMS_TO_TICKS(2000));
         lcd.clear();
       }
+      prevConnectTime = millis();
     }
   }
 }
