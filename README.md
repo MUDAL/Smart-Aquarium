@@ -33,9 +33,8 @@ I used transistors to switch off the TDS sensor when readings were taken from th
 ## Mobile Application  
 Notifications from the system are sent to an MQTT broker. The ``HiveMQ`` broker was used in this  
 project. The user can use a mobile application (MQTT client) that is linked to the broker to receive notifications  
-whenever sensor readings fall out of safe ranges. The safe range for each sensor reading is programmed through the ``captive  
-portal`` during Wi-Fi provisioning.  
-The ``MQTT Dashboard`` app from playstore was used. Details of the broker used are given below:  
+whenever sensor readings fall out of safe ranges. The safe range for each sensor reading is programmed through the ``captive portal`` during Wi-Fi provisioning.  
+The ``MQTT Dashboard`` app from playstore was used. The ``MQTT Alert`` app was also used for testing. Details of the broker used are given below:  
 
 - Broker name: HiveMQ  
 - Address: tcp://broker.hivemq.com  
@@ -44,6 +43,8 @@ The ``MQTT Dashboard`` app from playstore was used. Details of the broker used a
 The application (MQTT client) is configured as follows:  
 - Subscription topic: Same as the topic configured during Wi-Fi provisioning
 - Text box: To display warnings. It subscribes to the ``Subscription topic``.    
+
+Link to download ``MQTT Alert`` application: https://play.google.com/store/apps/details?id=gigiosoft.MQTTAlert  
 
 ## Electrical characteristics  
 - Running current: approximately 300mA  
