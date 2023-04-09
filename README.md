@@ -12,8 +12,9 @@ and turbidity sensors, to provide comprehensive information about water quality.
 3. Sensor data acquisition and management using an Arduino Nano.   
 4. Multiple sensors for comprehensive information about water quality (PH, TDS, temperature, and turbidity sensors).   
 5. Periodic display of measured data on an LCD display.   
-6. Periodic uploading of sensor data to a mobile phone or computer via MQTT for remote access and analysis.    
-7. Wi-Fi provisioning.  
+6. Periodic uploading of sensor data to the ``ThingSpeak`` server for remote access and analysis.
+7. Sending of notifications to the user's mobile device via MQTT if any of the parameters are not within a safe range.  
+8. Wi-Fi provisioning.  
 
 ## Challenges and Solutions  
 During the development of this system, I encountered several challenges, such as synchronization problems   
@@ -29,11 +30,29 @@ I used transistors to switch off the TDS sensor when readings were taken from th
 ## Software architecture  
 ![ss_sl drawio](https://user-images.githubusercontent.com/46250887/224770505-3b998808-d45e-4bd0-b01b-96e269d378f5.png)  
 
+## Mobile Application  
+Notifications from the system are sent to an MQTT broker. The ``HiveMQ`` broker was used in this  
+project. The user can use a mobile application (MQTT client) that is linked to the broker to receive notifications  
+whenever sensor readings fall out of safe ranges. The safe range for each sensor reading is programmed through the ``captive portal`` during Wi-Fi provisioning.  
+The ``MQTT Dashboard`` app from playstore was used. The ``MQTT Alert`` app was also used for testing. Details of the broker used are given below:  
+
+- Broker name: HiveMQ  
+- Address: tcp://broker.hivemq.com  
+- Port: 1883  
+
+The application (MQTT client) is configured as follows:  
+- Subscription topic: Same as the topic configured during Wi-Fi provisioning
+- Text box: To display warnings. It subscribes to the ``Subscription topic``.    
+
+Link to download ``MQTT Alert`` application: https://play.google.com/store/apps/details?id=gigiosoft.MQTTAlert  
+
 ## Electrical characteristics  
 - Running current: approximately 300mA  
-- Peak current: 480mA (occurs when all sensors are active and the system isn't connected to a Wi-Fi network)  
+- Peak current: 480mA (occurs when all sensors are active and the system is expecting a Wi-Fi network to connect to)  
 
 ## Images of prototype  
+![20230408_182823](https://user-images.githubusercontent.com/46250887/230764576-9cfaad29-961f-44e2-9f5a-f2a2a43e2f67.jpg)   
+![20230408_182829](https://user-images.githubusercontent.com/46250887/230764655-164b67b2-d48e-4b76-bdec-0b83c2cf6dfc.jpg)  
 ![Meh](https://user-images.githubusercontent.com/46250887/222832138-21d3c1ae-b202-4d82-ab10-050cc7b679d3.jpg)  
 ![Meh2](https://user-images.githubusercontent.com/46250887/222832470-6972eda9-8dfd-49b4-ab25-4dfadd23d7ae.jpg)  
 ![20230214_100459](https://user-images.githubusercontent.com/46250887/218694781-e6b665ba-9ee9-4f62-9a08-3a1ccbf7d70a.jpg)
