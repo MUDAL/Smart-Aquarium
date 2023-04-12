@@ -48,6 +48,14 @@ typedef struct
   float maxTds;
 }limit_t;
 
+enum FishType
+{
+  CATFISH = 0,
+  TILAPIA,
+  SALMON,
+  NO_FISH
+};
+
 //RTOS Handle(s)
 TaskHandle_t wifiTaskHandle;
 TaskHandle_t nodeTaskHandle;
@@ -78,6 +86,81 @@ static void AddStringIfTrue(char* str1,char* str2,bool condition)
   }
 }
 
+/**
+ * @breif Return true if number is within a range and false if otherwise.
+*/
+static bool InRange(float num,float minimum,float maximum,uint8_t decimalPlaces)
+{
+  uint32_t mult = 1; //multiplier
+  for(uint8_t i = 0; i < decimalPlaces; i++)
+  {
+    mult *= 10;
+  }    
+  return (lround(num * mult) >= lround(minimum * mult) && 
+          lround(num * mult) <= lround(maximum * mult));
+};
+
+/**
+ * @brief Return type of fish (if possible) that satisfies the PH,temperature, and 
+ * TDS ranges provided. 
+*/
+static FishType GetFishType(sensor_t& sensor)
+{
+  FishType fishType = NO_FISH;
+  if(InRange(sensor.ph,6.5,8.0,1) && InRange(sensor.temperature,24,30,2) && InRange(sensor.tds,0,999,0))
+  {
+    fishType = CATFISH;
+  }
+  else if(InRange(sensor.ph,6.5,8.5,1) && InRange(sensor.temperature,22,30,2) && InRange(sensor.tds,0,1999,0))
+  {
+    fishType = TILAPIA;
+  }
+  else if(InRange(sensor.ph,6.0,8.5,1) && InRange(sensor.temperature,10,15,2) && InRange(sensor.tds,0,499,0))
+  {
+    fishType = SALMON;
+  }
+  return fishType;  
+}
+
+/**
+ * @brief Display name of fish that is suitable for the water being tested
+*/
+static void DisplayNameOfFish(LiquidCrystal_I2C& lcd,char* nameOfFish)
+{
+  lcd.setCursor(0,0);
+  lcd.print("SUGGESTION: ");
+  lcd.setCursor(0,1);
+  lcd.print(nameOfFish);
+  //Print some spaces to prevent a mixup in case name of fish changes
+  for(uint8_t i = 0; i < 6; i++)
+  {
+    lcd.print(' ');
+  }
+}
+
+/**
+ * @brief Change state of LCD after 
+*/
+static void ChangeLcdState(LiquidCrystal_I2C& lcd,uint8_t& state,const uint8_t& nextState)
+{
+  state = nextState;
+  lcd.clear();
+}
+
+/**
+ * @brief Change state of LCD after a certain time 
+*/
+static void ChangeLcdState(LiquidCrystal_I2C& lcd,uint8_t& state,const uint8_t& nextState,
+                           uint32_t& prevTime,uint32_t timeBeforeTransition)
+{
+  if((millis() - prevTime) >= timeBeforeTransition)
+  {
+    prevTime = millis();
+    state = nextState;
+    lcd.clear();
+  }  
+}
+
 void setup() 
 {
   setCpuFrequencyMhz(80);
@@ -85,22 +168,10 @@ void setup()
   preferences.begin("S-Aqu",false);
   nodeToAppQueue = xQueueCreate(1,sizeof(sensor_t));
   nodeToMqttQueue = xQueueCreate(1,sizeof(sensor_t));
-  if(nodeToAppQueue != NULL)
+  if(nodeToAppQueue != NULL && nodeToMqttQueue != NULL)
   {
-    Serial.println("Node-Application Queue successfully created");
-  }
-  else
-  {
-    Serial.println("Node-Application Queue failed");
-  }
-  if(nodeToMqttQueue != NULL)
-  {
-    Serial.println("Node-MQTT Queue successfully created");
-  }
-  else
-  {
-    Serial.println("Node-MQTT Queue failed");
-  }  
+    Serial.println("Queues successfully created");
+  } 
   xTaskCreatePinnedToCore(WiFiManagementTask,"",7000,NULL,1,&wifiTaskHandle,1);
   xTaskCreatePinnedToCore(ApplicationTask,"",50000,NULL,1,NULL,1);
   xTaskCreatePinnedToCore(NodeTask,"",25000,NULL,1,&nodeTaskHandle,1);
@@ -191,7 +262,8 @@ void ApplicationTask(void* pvParameters)
   //Previously stored data (in ESP32's flash)
   char prevChannelId[SIZE_CHANNEL_ID] = {0};
   char prevApiKey[SIZE_API_KEY] = {0};
-
+  FishType fishType = NO_FISH;
+  
   uint32_t prevConnectTime = millis();
   //Startup message
   lcd.init();
@@ -209,6 +281,7 @@ void ApplicationTask(void* pvParameters)
   //Simple FSM to periodically change parameters being displayed.
   const uint8_t displayState1 = 0;
   const uint8_t displayState2 = 1;
+  const uint8_t displayState3 = 2;
   uint8_t displayState = displayState1; 
   uint32_t prevTime = millis(); 
    
@@ -244,14 +317,9 @@ void ApplicationTask(void* pvParameters)
         lcd.print("TEMP: ");
         lcd.print(sensorData.temperature,2);
         lcd.print("C    ");
-        if((millis() - prevTime) >= 5000)
-        {
-          displayState = displayState2;
-          prevTime = millis();
-          lcd.clear();
-        }
+        ChangeLcdState(lcd,displayState,displayState2,prevTime,5000);
         break;
-      
+        
       case displayState2: //Display TDS and Turbidity
         lcd.setCursor(0,0);
         lcd.print("TDS: ");
@@ -261,11 +329,29 @@ void ApplicationTask(void* pvParameters)
         lcd.print("TURB: ");
         lcd.print(sensorData.turbidity,1);
         lcd.print("NTU    ");
-        if((millis() - prevTime) >= 5000)
+        ChangeLcdState(lcd,displayState,displayState3,prevTime,5000);
+        break;
+
+      case displayState3: //Display the name of suitable fish
+        fishType = GetFishType(sensorData);
+        switch(fishType)
         {
-          displayState = displayState1;
-          prevTime = millis();
-          lcd.clear();
+          case CATFISH:
+            DisplayNameOfFish(lcd,"CATFISH");
+            ChangeLcdState(lcd,displayState,displayState1,prevTime,5000);
+            break;
+          case TILAPIA:
+            DisplayNameOfFish(lcd,"TILAPIA");
+            ChangeLcdState(lcd,displayState,displayState1,prevTime,5000);
+            break;
+          case SALMON:
+            DisplayNameOfFish(lcd,"SALMON");
+            ChangeLcdState(lcd,displayState,displayState1,prevTime,5000);
+            break;
+          case NO_FISH:
+            DisplayNameOfFish(lcd,"NONE");
+            ChangeLcdState(lcd,displayState,displayState1,prevTime,5000);
+            break;
         }
         break;
     }
@@ -477,6 +563,7 @@ void WiFiManagerCallback(void)
   char prevMaxTemp[SIZE_THRESHOLD] = {0};
   char prevMinTds[SIZE_THRESHOLD] = {0};
   char prevMaxTds[SIZE_THRESHOLD] = {0};
+  
   preferences.getBytes("0",prevSubTopic,SIZE_TOPIC);
   preferences.getBytes("A",prevClientID,SIZE_CLIENT_ID);
   preferences.getBytes("2",prevChannelId,SIZE_CHANNEL_ID);
@@ -487,6 +574,7 @@ void WiFiManagerCallback(void)
   preferences.getBytes("7",prevMaxTemp,SIZE_THRESHOLD);
   preferences.getBytes("8",prevMinTds,SIZE_THRESHOLD);
   preferences.getBytes("9",prevMaxTds,SIZE_THRESHOLD);
+  
   StoreNewFlashData("0",subTopic.getValue(),prevSubTopic,SIZE_TOPIC);
   StoreNewFlashData("A",clientID.getValue(),prevClientID,SIZE_CLIENT_ID);
   StoreNewFlashData("2",channelId.getValue(),prevChannelId,SIZE_CHANNEL_ID);
