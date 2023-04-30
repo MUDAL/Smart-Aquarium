@@ -48,12 +48,26 @@ typedef struct
   float maxTds;
 }limit_t;
 
-enum FishType
+namespace FishIndex
 {
-  CATFISH = 0,
-  TILAPIA,
-  SALMON,
-  NO_FISH
+  const uint8_t catFish = 0;
+  const uint8_t tilapia = 1;
+  const uint8_t salmon = 2;
+};
+
+namespace FishType
+{
+  enum
+  {
+    NO_FISH = 0,
+    CATFISH = (1 << FishIndex::catFish),
+    TILAPIA = (1 << FishIndex::tilapia),
+    SALMON = (1 << FishIndex::salmon),
+    CATFISH_TILAPIA = (CATFISH | TILAPIA),
+    CATFISH_SALMON = (CATFISH | SALMON),
+    TILAPIA_SALMON = (TILAPIA | SALMON),
+    ALL_FISHES = (CATFISH | TILAPIA | SALMON)
+  };
 };
 
 //RTOS Handle(s)
@@ -104,20 +118,21 @@ static bool InRange(float num,float minimum,float maximum,uint8_t decimalPlaces)
  * @brief Return type of fish (if possible) that satisfies the PH,temperature, and 
  * TDS ranges provided. 
 */
-static FishType GetFishType(sensor_t& sensor)
+static uint8_t GetFishType(sensor_t& sensor)
 {
-  FishType fishType = NO_FISH;
+  uint8_t fishType = FishType::NO_FISH;
+  
   if(InRange(sensor.ph,6.5,8.0,1) && InRange(sensor.temperature,24,30,2) && InRange(sensor.tds,0,999,0))
   {
-    fishType = CATFISH;
+    fishType |= FishType::CATFISH;
   }
-  else if(InRange(sensor.ph,6.5,8.5,1) && InRange(sensor.temperature,22,30,2) && InRange(sensor.tds,0,1999,0))
+  if(InRange(sensor.ph,6.5,8.5,1) && InRange(sensor.temperature,22,30,2) && InRange(sensor.tds,0,1999,0))
   {
-    fishType = TILAPIA;
+    fishType |= FishType::TILAPIA;
   }
-  else if(InRange(sensor.ph,6.0,8.5,1) && InRange(sensor.temperature,10,15,2) && InRange(sensor.tds,0,499,0))
+  if(InRange(sensor.ph,6.0,8.5,1) && InRange(sensor.temperature,10,15,2) && InRange(sensor.tds,0,499,0))
   {
-    fishType = SALMON;
+    fishType |= FishType::SALMON;
   }
   return fishType;  
 }
@@ -127,15 +142,18 @@ static FishType GetFishType(sensor_t& sensor)
 */
 static void DisplayNameOfFish(LiquidCrystal_I2C& lcd,char* nameOfFish)
 {
+  const uint8_t numOfCols = 16; //for LCD
+  uint8_t len = strlen(nameOfFish);
+  
   lcd.setCursor(0,0);
   lcd.print("SUGGESTION: ");
   lcd.setCursor(0,1);
   lcd.print(nameOfFish);
-  //Print some spaces to prevent a mixup in case name of fish changes
-  for(uint8_t i = 0; i < 6; i++)
+  //Spaces to prevent mixup of characters when name of fish changes
+  for(uint8_t i = 0; i < (numOfCols - len); i++)
   {
     lcd.print(' ');
-  }
+  } 
 }
 
 /**
@@ -262,7 +280,7 @@ void ApplicationTask(void* pvParameters)
   //Previously stored data (in ESP32's flash)
   char prevChannelId[SIZE_CHANNEL_ID] = {0};
   char prevApiKey[SIZE_API_KEY] = {0};
-  FishType fishType = NO_FISH;
+  uint8_t fishType = FishType::NO_FISH;
   
   uint32_t prevConnectTime = millis();
   //Startup message
@@ -336,22 +354,38 @@ void ApplicationTask(void* pvParameters)
         fishType = GetFishType(sensorData);
         switch(fishType)
         {
-          case CATFISH:
+          case FishType::NO_FISH:
+            DisplayNameOfFish(lcd,"NONE");
+            ChangeLcdState(lcd,displayState,displayState1,prevTime,5000);
+            break;  
+          case FishType::CATFISH:
             DisplayNameOfFish(lcd,"CATFISH");
             ChangeLcdState(lcd,displayState,displayState1,prevTime,5000);
             break;
-          case TILAPIA:
+          case FishType::TILAPIA:
             DisplayNameOfFish(lcd,"TILAPIA");
             ChangeLcdState(lcd,displayState,displayState1,prevTime,5000);
             break;
-          case SALMON:
+          case FishType::SALMON:
             DisplayNameOfFish(lcd,"SALMON");
             ChangeLcdState(lcd,displayState,displayState1,prevTime,5000);
             break;
-          case NO_FISH:
-            DisplayNameOfFish(lcd,"NONE");
+          case FishType::CATFISH_TILAPIA:
+            DisplayNameOfFish(lcd,"CATFISH,TILAPIA");
             ChangeLcdState(lcd,displayState,displayState1,prevTime,5000);
             break;
+          case FishType::CATFISH_SALMON:
+            DisplayNameOfFish(lcd,"CATFISH,SALMON");
+            ChangeLcdState(lcd,displayState,displayState1,prevTime,5000);          
+            break;
+          case FishType::TILAPIA_SALMON:
+            DisplayNameOfFish(lcd,"TILAPIA,SALMON");
+            ChangeLcdState(lcd,displayState,displayState1,prevTime,5000);          
+            break;
+          case FishType::ALL_FISHES:
+            DisplayNameOfFish(lcd,"ALL");
+            ChangeLcdState(lcd,displayState,displayState1,prevTime,5000);
+            break;                                              
         }
         break;
     }
@@ -457,6 +491,8 @@ void MqttTask(void* pvParameters)
   const char *mqttBroker = "broker.hivemq.com";
   const uint16_t mqttPort = 1883;  
   
+  uint32_t prevAlertTime = millis();
+  
   while(1)
   {
     if(WiFi.status() == WL_CONNECTED)
@@ -537,7 +573,11 @@ void MqttTask(void* pvParameters)
 
           if(isPhLow || isPhHigh || isTempLow || isTempHigh || isTdsLow || isTdsHigh)
           {
-            mqttClient.publish(prevSubTopic,dataToPublish); 
+            if((millis() - prevAlertTime) >= 25000)
+            {
+              mqttClient.publish(prevSubTopic,dataToPublish);
+              prevAlertTime = millis();  
+            }
           }
           uint32_t dataLen = strlen(dataToPublish);
           memset(dataToPublish,'\0',dataLen);
