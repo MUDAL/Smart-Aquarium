@@ -51,6 +51,7 @@ Link to download ``MQTT Alert`` application: https://play.google.com/store/apps/
 - Peak current: 480mA (occurs when all sensors are active and the system is expecting a Wi-Fi network to connect to)  
 
 ## Images of prototype  
+![IMG-20230519-WA0008](https://github.com/MUDAL/Smart-Aquarium/assets/46250887/6159f407-6ec6-415a-9747-6d91f9b1db5d)  
 ![20230408_182823](https://user-images.githubusercontent.com/46250887/230764576-9cfaad29-961f-44e2-9f5a-f2a2a43e2f67.jpg)   
 ![20230408_182829](https://user-images.githubusercontent.com/46250887/230764655-164b67b2-d48e-4b76-bdec-0b83c2cf6dfc.jpg)  
 ![Meh](https://user-images.githubusercontent.com/46250887/222832138-21d3c1ae-b202-4d82-ab10-050cc7b679d3.jpg)  
