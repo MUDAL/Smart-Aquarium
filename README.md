@@ -3,7 +3,7 @@
 ## Description  
 The Smart Aquarium System is a device that monitors water quality in real-time for aquariums.  
 This system utilizes an ESP32 [Master] and an Arduino Nano [Node] to enable wireless communication and sensor  
-data acquisition and management, respectively. It includes multiple sensors, such as PH, TDS, temperature,  
+data acquisition and management. It includes multiple sensors, such as PH, TDS, temperature,  
 and turbidity sensors, to provide comprehensive information about water quality.   
 
 ## Features  
@@ -13,7 +13,7 @@ and turbidity sensors, to provide comprehensive information about water quality.
 4. Multiple sensors for comprehensive information about water quality (PH, TDS, temperature, and turbidity sensors).   
 5. Periodic display of measured data on an LCD display.   
 6. Periodic uploading of sensor data to the ``ThingSpeak`` server for remote access and analysis.
-7. Sending of notifications to the user's mobile device via MQTT if any of the parameters are not within a safe range.  
+7. Notifying the user's mobile device via MQTT if any parameters are not within a safe range.  
 8. Wi-Fi provisioning.  
 
 ## Challenges and Solutions  
@@ -32,9 +32,9 @@ I used transistors to switch off the TDS sensor when readings were taken from th
 
 ## Mobile Application  
 Notifications from the system are sent to an MQTT broker. The ``HiveMQ`` broker was used in this  
-project. The user can use a mobile application (MQTT client) that is linked to the broker to receive notifications  
+project. The user can use a mobile application (MQTT client) linked to the broker to receive notifications  
 whenever sensor readings fall out of safe ranges. The safe range for each sensor reading is programmed through the ``captive portal`` during Wi-Fi provisioning.  
-The ``MQTT Dashboard`` app from playstore was used. The ``MQTT Alert`` app was also used for testing. Details of the broker used are given below:  
+The ``MQTT Dashboard`` app from Playstore was used. The ``MQTT Alert`` app was also used for testing. Details of the broker used are given below:  
 
 - Broker name: HiveMQ  
 - Address: tcp://broker.hivemq.com  
@@ -50,7 +50,11 @@ Link to download ``MQTT Alert`` application: https://play.google.com/store/apps/
 - Running current: approximately 300mA  
 - Peak current: 480mA (occurs when all sensors are active and the system is expecting a Wi-Fi network to connect to)  
 
-## Images of prototype  
+## Images of the prototype  
+![20230623_093336](https://github.com/MUDAL/Smart-Aquarium/assets/46250887/870539de-1ec0-4ba4-b1a3-990f8611e958)  
+![20230623_093144](https://github.com/MUDAL/Smart-Aquarium/assets/46250887/678fe6aa-5e3c-4e90-b36e-bcf3f2712f4d)    
+![20230623_093948](https://github.com/MUDAL/Smart-Aquarium/assets/46250887/c41a0fb3-f2a4-4e6a-83bd-b75e13286c0e)  
+![20230623_093311](https://github.com/MUDAL/Smart-Aquarium/assets/46250887/219abd81-0f63-414f-9f5a-a26622ac0eeb)  
 ![IMG-20230519-WA0008](https://github.com/MUDAL/Smart-Aquarium/assets/46250887/6159f407-6ec6-415a-9747-6d91f9b1db5d)  
 ![20230408_182823](https://user-images.githubusercontent.com/46250887/230764576-9cfaad29-961f-44e2-9f5a-f2a2a43e2f67.jpg)   
 ![20230408_182829](https://user-images.githubusercontent.com/46250887/230764655-164b67b2-d48e-4b76-bdec-0b83c2cf6dfc.jpg)  
@@ -67,5 +71,5 @@ Link to download ``MQTT Alert`` application: https://play.google.com/store/apps/
 
 ## Recommendations  
 1. Use of accurate sensors for future designs  
-2. Power optimization through the selection of better components as well as a more efficient firmware.  
+2. Power optimization through the selection of better components and more efficient firmware.  
 
